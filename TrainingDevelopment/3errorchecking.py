@@ -80,14 +80,12 @@ labels = {"Left": 1, "Right": 2, "Rest": 0}
 resource_stats = []
 monitoring = True
 
-
 def monitor_resources():
     """Monitor CPU and memory usage in a separate thread."""
     while monitoring:
         cpu_usage = psutil.cpu_percent(interval=1)
         memory_info = psutil.virtual_memory()
         resource_stats.append({"time": time(), "cpu": cpu_usage, "memory": memory_info.percent})
-
 
 # Start resource monitoring in a separate thread
 monitor_thread = threading.Thread(target=monitor_resources)
@@ -115,8 +113,10 @@ try:
             label = labels[cue_name]
             cue_clock = core.Clock()
             trial_samples = 0
+            start_time = time()
 
-            while cue_clock.getTime() < cue_duration:
+            # Collect EEG data until we reach the target sample count
+            while trial_samples < samples_per_cue and (time() - start_time) < cue_duration:
                 # Check for ESC key press during cue presentation
                 if event.getKeys(["escape"]):
                     print("Escape key pressed. Terminating...")
@@ -127,11 +127,25 @@ try:
 
                 # Collect EEG data
                 sample, timestamp = instream.pull_sample(timeout=1.0 / sampling_rate)
-                if sample and trial_samples < samples_per_cue:
+                if sample:
                     data[trial_idx, trial_samples, :] = sample
                     timestamps[trial_idx, trial_samples] = timestamp
                     event_markers[trial_idx, trial_samples] = label
                     trial_samples += 1
+                else:
+                    # Log missed samples
+                    print("Sample missed or timed out. Attempting again.")
+
+            # Handle case where data is not collected as expected (e.g., missing data)
+            while trial_samples < samples_per_cue:
+                sample, timestamp = instream.pull_sample(timeout=0.01)  # Short timeout to avoid blocking
+                if sample:
+                    data[trial_idx, trial_samples, :] = sample
+                    timestamps[trial_idx, trial_samples] = timestamp
+                    event_markers[trial_idx, trial_samples] = label
+                    trial_samples += 1
+                else:
+                    print("Waiting for more samples...")
 
             # Inter-trial interval
             win.flip()  # Blank screen
