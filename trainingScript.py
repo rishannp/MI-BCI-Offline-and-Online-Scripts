@@ -26,6 +26,10 @@ if val not in range(len(streams)):
 instream = pylsl.StreamInlet(streams[val])
 print(f"Connected to stream: {streams[val].name()}")
 
+# Compute time offset using LSL's built-in time_correction
+time_offset = instream.time_correction()
+print(f"Time offset computed: {time_offset}")
+
 # Stream information (for saving system configs)
 stream_info = instream.info()
 channel_names = []
@@ -63,7 +67,7 @@ event.waitKeys()
 cue_duration = 5  # seconds
 inter_trial_interval = 5  # seconds
 num_trials_per_class = 10
-sampling_rate = int(stream_details["sampling_rate"])  # 256 Hz in this case
+sampling_rate = int(stream_details["sampling_rate"])  # e.g., 256 Hz
 samples_per_cue = int(cue_duration * sampling_rate)
 
 # Preallocate arrays
@@ -71,6 +75,9 @@ num_trials = num_trials_per_class * 3  # Total trials for Left, Right, and Rest
 data = np.zeros((num_trials, samples_per_cue, stream_details["channel_count"]))
 timestamps = np.zeros((num_trials, samples_per_cue))
 event_markers = np.zeros((num_trials, samples_per_cue))
+
+# List to store latency values per sample (only the duration of pull_sample calls)
+latency_log = []
 
 # Cue labels
 cues = [(cue_left, "Left"), (cue_right, "Right"), (cue_rest, "Rest")]
@@ -111,12 +118,11 @@ try:
 
             # Present cue
             label = labels[cue_name]
-            cue_clock = core.Clock()
             trial_samples = 0
-            start_time = time()
 
-            # Collect EEG data until we reach the target sample count
-            while trial_samples < samples_per_cue and (time() - start_time) < cue_duration:
+            # Collect EEG data until we reach the target sample count or cue duration
+            trial_start_time = time()
+            while trial_samples < samples_per_cue and (time() - trial_start_time) < cue_duration:
                 # Check for ESC key press during cue presentation
                 if event.getKeys(["escape"]):
                     print("Escape key pressed. Terminating...")
@@ -125,23 +131,37 @@ try:
                 selected_cue.draw()
                 win.flip()
 
-                # Collect EEG data
+                # Measure the duration of the pull_sample call
+                local_time_before = pylsl.local_clock()
                 sample, timestamp = instream.pull_sample(timeout=1.0 / sampling_rate)
+                local_time_after = pylsl.local_clock()
+                sample_call_latency = local_time_after - local_time_before
+
                 if sample:
+                    # Apply time correction (if needed) to the timestamp
+                    corrected_timestamp = timestamp + time_offset
+
+                    # Record the sample and its call latency
+                    latency_log.append(sample_call_latency)
                     data[trial_idx, trial_samples, :] = sample
-                    timestamps[trial_idx, trial_samples] = timestamp
+                    timestamps[trial_idx, trial_samples] = corrected_timestamp
                     event_markers[trial_idx, trial_samples] = label
                     trial_samples += 1
                 else:
-                    # Log missed samples
                     print("Sample missed or timed out. Attempting again.")
 
             # Handle case where data is not collected as expected (e.g., missing data)
             while trial_samples < samples_per_cue:
+                local_time_before = pylsl.local_clock()
                 sample, timestamp = instream.pull_sample(timeout=0.01)  # Short timeout to avoid blocking
+                local_time_after = pylsl.local_clock()
+                sample_call_latency = local_time_after - local_time_before
+
                 if sample:
+                    corrected_timestamp = timestamp + time_offset
+                    latency_log.append(sample_call_latency)
                     data[trial_idx, trial_samples, :] = sample
-                    timestamps[trial_idx, trial_samples] = timestamp
+                    timestamps[trial_idx, trial_samples] = corrected_timestamp
                     event_markers[trial_idx, trial_samples] = label
                     trial_samples += 1
                 else:
@@ -160,7 +180,7 @@ except KeyboardInterrupt:
 monitoring = False
 monitor_thread.join()
 
-# Save data
+# Save data including latency log
 output = {
     "data": data,
     "timestamps": timestamps,
@@ -174,6 +194,7 @@ output = {
         "num_trials_per_class": num_trials_per_class,
     },
     "resource_stats": resource_stats,
+    "latency_log": latency_log,
 }
 
 with open("training_data.pkl", "wb") as f:
@@ -184,6 +205,11 @@ print("Training completed. Data saved to training_data.pkl.")
 # Close PsychoPy window
 win.close()
 core.quit()
+
+# ---------------------------------------------------------
+# Proiling in CMD
+#   python -m cProfile -s cumtime trainingScript.py
+# ---------------------------------------------------------
 
 #%% Train model from data
 

@@ -23,7 +23,8 @@ player_y = HEIGHT - player_radius * 2
 player_speed = 5  # Speed for incremental left-right movement
 
 # Obstacle settings
-obstacle_width, obstacle_height = 50, 20  # Rounded rectangle style
+base_obstacle_width, obstacle_height = 50, 20  # Base width and fixed height
+obstacle_width = base_obstacle_width  # This will update with each level
 obstacle_speed = 2  # Start slow for training
 obstacle_interval = 150  # Interval between obstacles
 
@@ -56,6 +57,10 @@ while running:
     
     # Spawn obstacle above player after interval or when previous obstacle is off-screen
     if obstacle is None or obstacle.y > HEIGHT:
+        # Update obstacle width based on current level
+        obstacle_width = base_obstacle_width + (level - 1) * 30
+        
+        # Create the obstacle centered above the player
         obstacle = pygame.Rect(player_x - obstacle_width // 2, -obstacle_height, obstacle_width, obstacle_height)
         obstacle_timer = 0  # Reset timer
         score += 1  # Increase score as reward for dodging
