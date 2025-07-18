@@ -66,7 +66,7 @@ event.waitKeys()
 # Training configuration
 cue_duration = 5  # seconds
 inter_trial_interval = 5  # seconds
-num_trials_per_class = 2
+num_trials_per_class = 10
 sampling_rate = int(stream_details["sampling_rate"])  # e.g., 256 Hz
 samples_per_cue = int(cue_duration * sampling_rate)
 
@@ -222,4 +222,7 @@ file_path = "training_data.pkl"
 with open(file_path, 'rb') as file:
     data = pickle.load(file)
     
-#%%O Output models... 
+#%%O Output models: CSP LDA, PLVGAT, Riemann MDRM
+
+#%% CSP + LDA
+
