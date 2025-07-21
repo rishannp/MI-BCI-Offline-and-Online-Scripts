@@ -226,3 +226,4 @@ with open(file_path, 'rb') as file:
 
 #%% CSP + LDA
 
+#%% Finetune GAT

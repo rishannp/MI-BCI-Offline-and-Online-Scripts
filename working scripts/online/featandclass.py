@@ -19,7 +19,7 @@ def plvfcn(eegData: np.ndarray) -> np.ndarray:
     Returns:
         plvMatrix: array shape (n_channels, n_channels)
     """
-    # Restrict to first 19 electrodes (adjust if needed)
+    # Restrict to first N electrodes (adjust if needed)
     data = eegData[:, :16]
     n_times, n_channels = data.shape
 
