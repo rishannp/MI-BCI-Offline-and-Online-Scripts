@@ -1,40 +1,24 @@
+# preprocess.py
+
 import numpy as np
 from scipy.signal import butter, filtfilt
+from config import SAMPLING_RATE
 
 class Preprocessor:
-    def __init__(self, fs, lowcut=8, highcut=30, order=4, artifact_threshold=100.0):
-        """
-        I set up a Butterworth bandpass filter (default 8–30 Hz)
-        and an artifact rejection threshold in microvolts.
-        """
+    def __init__(self, fs=SAMPLING_RATE, lowcut=8, highcut=30, order=4, artifact_threshold=100.0):
         nyq = 0.5 * fs
         low, high = lowcut/nyq, highcut/nyq
         self.b, self.a = butter(order, [low, high], btype="band")
-        # threshold (µV) above which windows are rejected
         self.artifact_thresh = artifact_threshold
 
     def process(self, window: np.ndarray) -> np.ndarray:
-        """
-        I apply bandpass filtering to each channel, then
-        reject the window if any sample exceeds the threshold.
-
-        Args:
-            window: shape (n_samples, n_channels)
-
-        Returns:
-            filtered window, or None if artifact detected
-        """
-        # bandpass filter
         filtered = filtfilt(self.b, self.a, window, axis=0)
-
-        # artifact check: peak‐to‐peak amplitude
-        peak = np.max(filtered, axis=0)
-        trough = np.min(filtered, axis=0)
-        ptp = peak - trough
-
-        # if any channel’s p-to-p amplitude > threshold, reject
+        ptp = filtered.max(axis=0) - filtered.min(axis=0)
         if np.any(ptp > self.artifact_thresh):
-            # drop this window
             return None
-
         return filtered
+
+# helper for main_online.py
+_pre = Preprocessor()
+def preprocess_window(window):
+    return _pre.process(window)

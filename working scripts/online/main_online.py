@@ -1,58 +1,56 @@
 # main_online.py
 
-import numpy as np
-from threading import Thread
-from queue import Queue
-from collections import deque
-
-from config import WINDOW_SIZE, STEP_SIZE, BUFFER_SIZE, THRESHOLD
-from lsl_stream import LSLStreamHandler
-from preprocess import Preprocessor
-from control_logic import ControlLogic
 from game import run_game
+from lsl_stream import stream_data
+from preprocess import preprocess_window
 from featandclass import BCIPipeline
-
-# store raw EEG if you want
-raw_eeg = []
-
-def bci_loop(action_queue, pipeline):
-    stream = LSLStreamHandler()
-    prep   = Preprocessor(fs=stream.sampling_rate)
-    ctrl   = ControlLogic(buffer_size=BUFFER_SIZE, threshold=THRESHOLD)
-
-    buf = deque(maxlen=WINDOW_SIZE)
-    while True:
-        sample, ts = stream.pull_sample()
-        if sample is None: continue
-        raw_eeg.append((ts, sample))
-        buf.append(sample)
-
-        if len(buf)==WINDOW_SIZE and len(buf)%STEP_SIZE==0:
-            window = np.array(buf)
-            proc   = prep.process(window)
-            if proc is None: continue
-            pred   = pipeline.predict(proc)
-            act    = ctrl.update(pred)
-            if act is not None:
-                # for CSP+LDA, store pseudo-label
-                if pipeline.method=='csp':
-                    # heuristic: if obstacle > center, label=0 else 1
-                    # you'd need shared game x-position here
-                    label = 0
-                    pipeline._win_buf.append(proc)
-                    pipeline._lab_buf.append(label)
-                action_queue.put(act)
+from queue import Queue
+from threading import Thread
+import collections
 
 def main():
-    # choose your method:
-    METHOD = 'plv'  # 'csp' or 'plv'
+    METHOD = 'plv'  # 'plv' or 'csp'
     pipeline = BCIPipeline(method=METHOD)
-
     action_queue = Queue()
-    t = Thread(target=bci_loop, args=(action_queue, pipeline), daemon=True)
-    t.start()
+    label_queue  = Queue()
+    adapt_queue  = Queue()   # NEW: notify game.py when adapt() runs
 
-    run_game(action_queue, pipeline)
+    # Shared logs
+    game_states  = []
+    raw_eeg_log  = collections.deque(maxlen=1)
 
-if __name__=='__main__':
+    latest_processed = None
+
+    def bci_loop():
+        nonlocal latest_processed
+        while True:
+            window = stream_data()
+            processed = preprocess_window(window)
+            if processed is None:
+                continue
+            latest_processed = processed
+
+            # Predict & send command
+            cmd = pipeline.predict(processed)
+            action_queue.put(cmd)
+
+            # Adaptation only on correct trials
+            if pipeline.adaptive and not label_queue.empty():
+                label = label_queue.get()
+                if cmd == label:
+                    pipeline._win_buf.append(processed)
+                    pipeline._lab_buf.append(label)
+                if len(pipeline._win_buf) >= pipeline.adapt_N:
+                    pipeline.adapt()
+                    adapt_queue.put(True)    # signal adaptation event
+
+            # keep latest window for game.py
+            raw_eeg_log.clear()
+            raw_eeg_log.append(processed)
+
+    Thread(target=bci_loop, daemon=True).start()
+    # pass adapt_queue into run_game
+    run_game(action_queue, adapt_queue, game_states, label_queue, raw_eeg_log)
+
+if __name__ == '__main__':
     main()

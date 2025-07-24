@@ -1,38 +1,39 @@
+# lsl_stream.py
+
+import numpy as np
 import pylsl
+from config import WINDOW_SIZE
 
-class LSLStreamHandler:
-    def __init__(self, stream_index=None, sampling_rate=None):
-        """
-        Resolve available LSL streams and connect to the one the user selects.
-        If sampling_rate isn’t given, grab the stream’s nominal rate.
-        """
-        streams = pylsl.resolve_streams()
-        if not streams:
-            raise RuntimeError("No LSL streams found. Ensure your EEG device is online.")
-        if stream_index is None:
-            for i, s in enumerate(streams):
-                print(f"{i}: {s.name()} ({s.type()})")
-            stream_index = int(input("Select LSL stream index: "))
-        self.inlet = pylsl.StreamInlet(streams[stream_index])
-        # record time offset for accurate timestamps
-        self.time_offset = self.inlet.time_correction()
-        # if user passed sampling_rate, use it; otherwise query the stream
-        if sampling_rate is None:
-            info = self.inlet.info()
-            self.sampling_rate = info.nominal_srate()
-            print(f"Using stream nominal sampling rate: {self.sampling_rate} Hz")
-        else:
-            self.sampling_rate = sampling_rate
+# Resolve all available LSL streams
+_streams = pylsl.resolve_streams()
+if not _streams:
+    raise RuntimeError("No LSL streams found. Ensure your EEG device is online.")
 
-    def pull_sample(self, timeout=None):
-        """
-        Pull one sample (list of floats) and correct its timestamp.
-        Default timeout = 1 / sampling_rate.
-        """
-        if timeout is None:
-            timeout = 1.0 / self.sampling_rate
-        sample, ts = self.inlet.pull_sample(timeout=timeout)
+# Prompt user to select the correct EEG stream
+print("\nAvailable LSL Streams:\n")
+for idx, stream in enumerate(_streams):
+    print(f"{idx}: {stream.name()} ({stream.type()})")
+selection = int(input("\nSelect LSL stream index: "))
+if selection < 0 or selection >= len(_streams):
+    raise ValueError("Invalid stream index selected.")
+
+# Connect to the chosen stream
+_chosen = _streams[selection]
+_inlet = pylsl.StreamInlet(_chosen)
+_time_offset = _inlet.time_correction()
+_sampling_rate = _inlet.info().nominal_srate()
+print(f"Connected to stream '{_chosen.name()}' at {_sampling_rate:.1f} Hz")
+
+def stream_data():
+    """
+    Pulls exactly WINDOW_SIZE samples from the selected LSL inlet,
+    applies the time correction, and returns a NumPy array of shape
+    (WINDOW_SIZE, n_channels).
+    """
+    buf = []
+    while len(buf) < WINDOW_SIZE:
+        sample, ts = _inlet.pull_sample(timeout=1.0 / _sampling_rate)
         if sample:
-            return sample, ts + self.time_offset
-        else:
-            return None, None
+            # optionally: ts_corrected = ts + _time_offset
+            buf.append(sample)
+    return np.array(buf)
