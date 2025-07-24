@@ -147,8 +147,8 @@ num_hits = sum(t['outcome'] == 'hit' for t in trials)
 
 Ideas for customization:
 
-- Replace the GAT with Riemannian methods or DeepConvNet
-- Add a third "no-op" class or rest state
+- Include other models!
+- Add a third rest state class
 - Visualize model accuracy in real time
 - Add calibration or scoring screens between levels
 
