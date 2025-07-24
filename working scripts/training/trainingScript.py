@@ -66,7 +66,7 @@ event.waitKeys()
 # Training configuration
 cue_duration = 5  # seconds
 inter_trial_interval = 5  # seconds
-num_trials_per_class = 10
+num_trials_per_class = 3
 sampling_rate = int(stream_details["sampling_rate"])  # e.g., 256 Hz
 samples_per_cue = int(cue_duration * sampling_rate)
 
@@ -207,7 +207,7 @@ win.close()
 core.quit()
 
 # ---------------------------------------------------------
-# Proiling in CMD
+# Profiling in CMD
 #   python -m cProfile -s cumtime trainingScript.py
 # ---------------------------------------------------------
 
@@ -222,8 +222,319 @@ file_path = "training_data.pkl"
 with open(file_path, 'rb') as file:
     data = pickle.load(file)
     
-#%%O Output models: CSP LDA, PLVGAT, Riemann MDRM
+#%%O Output models: CSP LDA, PLVGAT
 
-#%% CSP + LDA
+import numpy as np
+import scipy.signal as sig
+from mne.decoding import CSP
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+import joblib
+
+
+def train_csp_lda(eeg_data: np.ndarray,
+                  event_markers: np.ndarray,
+                  sfreq: float,
+                  classes: tuple = (1, 2)) -> dict:
+    """
+    Train CSP + LDA on calibration EEG data, labeling each trial by the first marker sample.
+
+    Args:
+        eeg_data: array shape (n_trials, n_times, n_channels)
+        event_markers: array shape (n_trials, n_times), values {0,1,2}
+        sfreq: sampling frequency in Hz
+        n_components: number of spatial patterns to retain per class
+        classes: tuple of class labels to include (ignore rest=0)
+
+    Returns:
+        model_dict containing:
+          - 'csp': trained CSP object
+          - 'lda': trained LDA object
+          - 'filters': spatial filters (patterns)
+          - 'lda_coef': LDA weight vector
+          - 'lda_intercept': LDA intercept
+    """
+    first_labels = event_markers[:, 0]
+    mask = np.isin(first_labels, classes)
+    X = eeg_data[mask]
+    X = np.transpose(X, (0, 2, 1))  # to shape (n_epochs, n_channels, n_times)
+    y = first_labels[mask]
+
+    csp = CSP(n_components=4, reg=None, log=True, norm_trace=False)
+    csp.fit(X, y)
+    X_csp = csp.transform(X)
+
+    lda = LinearDiscriminantAnalysis()
+    lda.fit(X_csp, y)
+
+    return {
+        'csp': csp,
+        'lda': lda,
+        'filters': csp.filters_,
+        'lda_coef': lda.coef_,
+        'lda_intercept': lda.intercept_,
+    }
+
+
+def save_model(model: dict, filename: str) -> None:
+    """
+    Save CSP + LDA model components to disk.
+    """
+    joblib.dump(model, filename)
+
+
+def load_model(filename: str) -> dict:
+    """
+    Load saved CSP + LDA model.
+    """
+    return joblib.load(filename)
+
+
+def segment_signal(eeg_data: np.ndarray,
+                   sfreq: float,
+                   window_sec: float = 3.0,
+                   hop_sec: float = 0.5) -> np.ndarray:
+    """
+    Segment continuous EEG into overlapping windows.
+    """
+    win_samples = int(window_sec * sfreq)
+    hop_samples = int(hop_sec * sfreq)
+    n_times, n_channels = eeg_data.shape
+    segments = []
+    for start in range(0, n_times - win_samples + 1, hop_samples):
+        end = start + win_samples
+        segments.append(eeg_data[start:end, :])
+    return np.stack(segments, axis=0)
+
+
+def compute_plv_matrix(eeg_segment: np.ndarray, n_elec: int = 62) -> np.ndarray:
+    """
+    Compute PLV matrix for a single EEG segment.
+    """
+    data = eeg_segment[:, :n_elec]
+    n_times, n_channels = data.shape
+    analytic = sig.hilbert(data, axis=0)
+    phase = np.angle(analytic)
+    plv = np.zeros((n_channels, n_channels))
+    for i in range(n_channels):
+        for j in range(i + 1, n_channels):
+            diff = phase[:, j] - phase[:, i]
+            plv_val = np.abs(np.sum(np.exp(1j * diff)) / n_times)
+            plv[i, j] = plv_val
+            plv[j, i] = plv_val
+    return plv
+
+
+def compute_plv_series(eeg_data: np.ndarray,
+                       sfreq: float,
+                       window_sec: float = 3.0,
+                       hop_sec: float = 0.5,
+                       n_electrodes: int = 62) -> np.ndarray:
+    """
+    Compute PLV matrices for all overlapping windows in continuous EEG.
+    """
+    segments = segment_signal(eeg_data, sfreq, window_sec, hop_sec)
+    return np.stack([compute_plv_matrix(seg, n_elec=n_electrodes) for seg in segments], axis=0)
+
+# Execute training and PLV computation using pre-loaded data dict
+sfreq = 256.0  # update to your sampling frequency
+
+# Train CSP+LDA model with 4 spatial filters
+model = train_csp_lda(
+    data['data'],               # EEG data array
+    data['event_markers'],       # event markers array (correct key)
+    sfreq=sfreq
+)
+filters = model['filters']
+lda_coef = model['lda_coef']
+lda_intercept = model['lda_intercept']
+print(f"CSP filters shape: {filters.shape}  # should be (4, n_channels)")
+print(f"LDA coefficients shape: {lda_coef.shape}")
+print(f"LDA intercepts shape: {lda_intercept.shape}")
+
+# Compute PLV series and labels for all windows across trials
+all_plv = []
+all_labels = []
+first_labels = data['event_markers'][:, 0]
+for trial_idx, trial in enumerate(data['data']):
+    plv_series = compute_plv_series(trial, sfreq=sfreq)
+    n_windows = plv_series.shape[0]
+    all_plv.append(plv_series)
+    label = first_labels[trial_idx]
+    all_labels.extend([label] * n_windows)
+    print(f"Trial {trial_idx}: {n_windows} windows of {plv_series.shape[1]}×{plv_series.shape[2]} PLV matrices")
+
+# Stack into arrays: (#samples, n_elec, n_elec) and labels (#samples,)
+plv_array = np.concatenate(all_plv, axis=0)
+label_vector = np.array(all_labels)
+
+print(f"Final PLV array shape: {plv_array.shape}")
+print(f"Label vector shape: {label_vector.shape}")
+
+# Overwrite training_data.pkl with augmented data dict
+import pickle
+try:
+    with open('training_data.pkl', 'rb') as f:
+        saved = pickle.load(f)
+except FileNotFoundError:
+    saved = {}
+# Update saved dict
+saved.update({
+    'filters': filters,
+    'lda_coef': lda_coef,
+    'lda_intercept': lda_intercept,
+    'plv_array': plv_array,
+    'label_vector': label_vector,
+})
+# Write back to pickle
+with open('training_data.pkl', 'wb') as f:
+    pickle.dump(saved, f)
+print("training_data.pkl updated with CSP, LDA and PLV entries.")
+
 
 #%% Finetune GAT
+
+import os
+import pickle
+
+import torch
+import torch.nn.functional as F
+from torch import nn
+from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
+from torch_geometric.nn import GATv2Conv, GraphNorm, global_mean_pool
+from torch_geometric.utils import add_self_loops
+from torch_geometric.seed import seed_everything
+
+# ---------------------------
+# CONFIG
+# ---------------------------
+pretrained_path = r'C:\Users\uceerjp\Desktop\PhD\Year 2\online experiments\working scripts\training\best_gat_model.pt'
+finetune_epochs = 15
+batch_size      = 32
+lr              = 1e-4
+dropout         = 0.1
+h1, h2, h3      = 32, 16, 8
+heads           = 7
+topk_percent    = 0.4
+use_subset      = False
+
+# Force CPU usage only
+seed_everything(12345)
+device = torch.device('cpu')  # use CPU only
+
+# ---------------------------
+# YOUR ELECTRODE INDICES
+# ---------------------------
+subset_indices = None  # e.g. [0,2,5,7] if using subset else None
+
+# ---------------------------
+# GAT MODEL DEFINITION
+# ---------------------------
+class SimpleGAT(nn.Module):
+    def __init__(self, in_channels, h1, h2, h3, num_heads, dropout):
+        super().__init__()
+        self.conv1 = GATv2Conv(in_channels, h1, heads=num_heads,
+                               concat=True, dropout=dropout)
+        self.gn1   = GraphNorm(h1 * num_heads)
+        self.conv2 = GATv2Conv(h1 * num_heads, h2, heads=num_heads,
+                               concat=True, dropout=dropout)
+        self.gn2   = GraphNorm(h2 * num_heads)
+        self.conv3 = GATv2Conv(h2 * num_heads, h3, heads=num_heads,
+                               concat=False, dropout=dropout)
+        self.gn3   = GraphNorm(h3)
+        self.lin   = nn.Linear(h3, 2)
+
+    def forward(self, data):
+        x, edge_index, batch = data.x, data.edge_index, data.batch
+        x = F.relu(self.gn1(self.conv1(x, edge_index)))
+        x = F.relu(self.gn2(self.conv2(x, edge_index)))
+        x = F.relu(self.gn3(self.conv3(x, edge_index)))
+        x = global_mean_pool(x, batch)
+        return self.lin(x)
+
+# ---------------------------
+# GRAPH PREPROCESSING
+# ---------------------------
+def preprocess_graph(data, topk_percent=0.4):
+    plv = data.x.clone().detach()
+    if subset_indices is not None:
+        plv = plv[subset_indices][:, subset_indices]
+    num_nodes = plv.size(0)
+    plv.fill_diagonal_(0.0)
+
+    triu = torch.triu_indices(num_nodes, num_nodes, offset=1)
+    weights = plv[triu[0], triu[1]]
+    k = int(weights.numel() * topk_percent)
+    topk = torch.topk(weights, k=k, sorted=False).indices
+
+    row = triu[0][topk]
+    col = triu[1][topk]
+    edge_index = torch.cat([
+        torch.stack([row, col], dim=0),
+        torch.stack([col, row], dim=0)
+    ], dim=1)
+    edge_index, _ = add_self_loops(edge_index, num_nodes=num_nodes)
+
+    data.edge_index = edge_index
+    return data
+
+# ---------------------------
+# LOAD YOUR CALIBRATION DATA
+# ---------------------------
+with open('training_data.pkl', 'rb') as f:
+    saved = pickle.load(f)
+plv_array    = saved['plv_array']    # shape = (N_windows, n_elec, n_elec)
+label_vector = saved['label_vector'] # shape = (N_windows,)
+
+# ---------------------------
+# BUILD PyG DATA LIST (filtering only classes 1 and 2)
+new_graphs = []
+for i in range(plv_array.shape[0]):
+    raw_label = label_vector[i]
+    # skip rest class (0)
+    if raw_label not in (1, 2):
+        continue
+    plv = torch.tensor(plv_array[i], dtype=torch.float)
+    # remap labels from {1,2} to {0,1}
+    y = torch.tensor(raw_label - 1, dtype=torch.long)
+    data = Data(x=plv, y=y)
+    new_graphs.append(preprocess_graph(data, topk_percent))
+
+# ---------------------------
+# DATA LOADER
+loader = DataLoader(new_graphs, batch_size=batch_size, shuffle=True)
+# ---------------------------
+# infer in_channels from one graph after preprocessing
+in_feats = new_graphs[0].x.size(1)
+model = SimpleGAT(in_feats, h1, h2, h3, heads, dropout).to(device)
+# load weights onto CPU
+state = torch.load(pretrained_path, map_location='cpu')
+model.load_state_dict(state)
+model.train()
+
+opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+crit = nn.CrossEntropyLoss()
+
+best_acc = 0.0
+best_model_path = 'best_finetuned_model.pt'
+
+for epoch in range(1, finetune_epochs+1):
+    correct = total = 0
+    for batch in loader:
+        batch = batch.to(device)
+        opt.zero_grad()
+        logits = model(batch)
+        loss = crit(logits, batch.y)
+        loss.backward()
+        opt.step()
+        preds = logits.argmax(dim=1)
+        correct += (preds == batch.y).sum().item()
+        total += batch.num_graphs
+    epoch_acc = correct / total
+    # save best model
+    if epoch_acc > best_acc:
+        best_acc = epoch_acc
+        torch.save(model.state_dict(), best_model_path)
+    print(f"Epoch {epoch}/{finetune_epochs}  Acc: {epoch_acc:.2%}  Best: {best_acc:.2%}")
+
+print(f"Best fine-tuned model saved to {best_model_path} with Acc: {best_acc:.2%}")
