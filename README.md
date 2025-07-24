@@ -1,116 +1,187 @@
-# Documentation: EEG Data Collection with Latency Measurement using LSL and PsychoPy
-This script is designed for EEG data collection in an experimental training session. It integrates EEG acquisition via Lab Streaming Layer (LSL), visual cue presentation with PsychoPy, and real‐time measurement of the data acquisition latency. Additionally, the script monitors system resources during the experiment and saves all relevant data for post-session analysis.
+# 🧠 BCI Lane Runner (Adaptive Online EEG Control)
+
+Welcome to **BCI Lane Runner**, an adaptive Brain-Computer Interface (BCI) game designed for **real-time online EEG decoding** using CSP or GAT-based classifiers. The player moves left or right to intercept falling targets, controlled entirely by your brain signals (or keyboard fallback for testing). Built for **online adaptation**, model retraining happens seamlessly between levels using correctly classified EEG windows.
 
 ---
 
-## Overview
+## 🏑 Overview
 
-- **Purpose:**  
-  The script collects EEG data while presenting visual cues (Left, Right, Rest) to the participant. For each EEG sample acquired from the LSL stream, the script measures the latency of the data acquisition call (i.e. the duration of the `pull_sample` call) using high-resolution local clock readings.
-
-- **Key Features:**  
-  - Resolves available LSL streams and allows user selection.
-  - Computes a time offset using LSL’s built-in `time_correction` function.
-  - Presents visual stimuli and instructions via PsychoPy.
-  - Acquires a fixed number of EEG samples per cue while measuring and logging the call latency.
-  - Monitors CPU and memory usage in a separate thread.
-  - Saves the EEG data, timestamps, event markers, resource statistics, and latency measurements to a pickle file.
+- Real-time BCI loop using EEG data via Lab Streaming Layer (LSL)
+- Feature extraction via **PLV + Graph Attention Network (GAT)** or **CSP + LDA**
+- Online adaptation every *N* correct trials
+- 2-lane runner-style game with balanced left/right class presentation
+- Full trial logging: EEG windows, spawn/goal positions, outcomes
 
 ---
 
-## Dependencies
+## 🧩 System Architecture
 
-Make sure the following Python libraries are installed:
-- **pylsl:** For resolving and connecting to EEG streams.
-- **psychopy:** For displaying visual stimuli and managing experimental flow.
-- **numpy:** For numerical data storage and processing.
-- **pickle:** For saving collected data.
-- **psutil:** For monitoring CPU and memory usage.
-- **threading:** For running resource monitoring concurrently.
-- **time:** For time measurements.
-
-Install the required packages using pip if needed:
-```bash
-pip install pylsl psychopy numpy psutil
+```
+[LSL Stream] → [Preprocessing] → [Classifier] → [Prediction Queue]
+                                            ↘ [Correct Trials] → [Adaptation]
+[Game Engine (Pygame)] ← [Action Queue] ←────
+                            ↑
+                  [EEG Snapshot per Frame]
 ```
 
 ---
 
-## Detailed Functionality
+## ⚙️ Configuration
 
-### 1. LSL Stream Setup
-- **Stream Resolution and Selection:**  
-  The script first resolves available LSL streams. It then prints a list of stream names and prompts the user to select one by entering its corresponding number.
-  
-- **Connection and Time Offset:**  
-  Once a stream is selected, an inlet is created to receive data. The script computes a time offset using `instream.time_correction()`, which estimates the difference between the EEG device’s clock and the local computer’s clock. This offset is used to correct the timestamps of the acquired samples.
+All settings live in `config.py`:
 
-- **Stream Metadata:**  
-  Metadata (such as stream name, type, channel count, sampling rate, and channel labels) is parsed from the stream’s XML description and stored for later reference.
+```python
+# Static vs Adaptive
+ADAPTATION      = True       # toggle adaptation
+ADAPT_N         = 10         # N correct trials before retraining
 
-### 2. PsychoPy Experimental Setup
-- **Window and Stimuli Initialization:**  
-  A full-screen PsychoPy window with a black background is created. Several text stimuli are defined:
-  - Instructions for the participant.
-  - A fixation cross ("+").
-  - Visual cues for "Left", "Right", and "Rest" conditions.
+# Game settings
+NUM_LEVELS        = 10       # number of levels in total
+TRIALS_PER_LEVEL  = 20       # number of trials per level
 
-- **Starting the Experiment:**  
-  The instructions are displayed, and the script waits for a key press to begin the experiment.
+# EEG Pipeline
+WINDOW_SIZE     = 256 * 3    # 3-second windows at 256Hz
+STEP_SIZE       = 128        # 75% overlap
+BUFFER_SIZE     = 10         # smoothing buffer for prediction
+THRESHOLD       = 3          # majority-vote threshold
+SAMPLING_RATE   = 256        # Hz
 
-### 3. Experiment Configuration
-- **Timing Parameters:**  
-  - `cue_duration`: Duration (in seconds) for which each cue is presented.
-  - `inter_trial_interval`: Pause (in seconds) between trials.
-  - `num_trials_per_class`: Number of trials for each cue condition.
-  - `samples_per_cue`: Number of EEG samples to acquire per cue, computed as cue duration multiplied by the sampling rate.
+# Paths to pretrained model
+TRAINING_DATA   = "./training_data.pkl"
+GAT_MODEL_PT    = "./best_finetuned_model.pt"
 
-- **Data Preallocation:**  
-  Arrays are preallocated for EEG data, timestamps, and event markers. A list (`latency_log`) is also initialized to record the duration of each `pull_sample` call.
-
-### 4. Data Acquisition and Latency Measurement
-- **Trial Loop:**  
-  The experiment proceeds through trials. In each trial:
-  - The order of cues is shuffled.
-  - A 1-second fixation cross is shown before cue presentation.
-  - For each cue, data is collected until the number of required samples is reached or the cue duration expires.
-  
-- **Latency Measurement:**  
-  For every sample, the script records the local time immediately before and after calling `instream.pull_sample()`. The duration of the sample acquisition call (i.e. `local_time_after - local_time_before`) is computed and stored in `latency_log`. This value reflects the latency of the data acquisition function independent of the experiment’s waiting periods.
-
-- **Handling Missed Samples:**  
-  If a sample is missed or times out, the script prints a warning and continues attempting to collect the required number of samples.
-
-### 5. Resource Monitoring
-- **Background Monitoring Thread:**  
-  A separate thread continuously monitors CPU and memory usage using `psutil`. The resource statistics are appended to the `resource_stats` list at 1-second intervals.
-
-### 6. Data Saving and Cleanup
-- **Data Aggregation:**  
-  At the end of the experiment (or if terminated early by pressing the ESC key), all collected data—including the EEG data, corrected timestamps, event markers, resource statistics, and latency log—is aggregated into a dictionary.
-
-- **Saving to File:**  
-  The aggregated data is saved into a pickle file (`training_data.pkl`) for further analysis.
-
-- **Cleanup:**  
-  The resource monitoring thread is stopped, and the PsychoPy window is closed before the script exits.
-
----
-
-## Profiling Instructions
-
-To profile the script and view performance statistics (such as the cumulative time spent in various function calls), run the following command in Command Prompt (CMD):
-
-```bash
-python -m cProfile -s cumtime trainingScript.py
+# Subject/session
+SUBJECT_ID      = "001"
+RESULTS_DIR     = "./results"
 ```
 
-This command sorts the profiling output by cumulative time, which helps in identifying the most time-consuming parts of the script.
+---
+
+## 🚀 Running the Experiment
+
+1. Start your EEG acquisition software and ensure an LSL stream is available.
+2. Activate your Python environment and install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Launch the experiment:
+   ```bash
+   python main_online.py
+   ```
+
+Keyboard fallback: Use the ← / → keys if no EEG is available or for debugging.
 
 ---
 
-## Summary
+## 🎮 Gameplay Description
 
-This script efficiently integrates EEG data collection, real-time latency measurement of the data acquisition calls, visual cue presentation, and system resource monitoring. By measuring only the duration of the `pull_sample` calls, the script isolates the acquisition latency from the intentional wait times built into the experimental design. All experimental data is saved for further analysis, and the script can be profiled to optimize performance if necessary.
+- The screen shows a player circle at the bottom and a falling goal block.
+- At each trial, the block spawns on the **left or right lane** (random but balanced).
+- Move your cursor (via BCI prediction) to intercept the block = **hit**, else **miss**.
+- Each **level contains N trials** (hits + misses). After N trials:
+  - Model retrains using **correctly classified trials**.
+  - "Adapting" flashes in **green** for 1 second as a visual cue.
+- Game continues through `NUM_LEVELS`.
 
-Feel free to modify the configuration parameters (e.g., cue duration, inter-trial interval, number of trials) to suit your experimental needs.
+---
+
+## 🧠 Model Training & Adaptation
+
+- Two modes:
+  - `method='plv'`: Uses Phase-Locking Value (PLV) matrix → GATv2
+  - `method='csp'`: Uses CSP + Linear Discriminant Analysis
+- Online adaptation:
+  - Only trials where the classifier's prediction matches the true label are stored.
+  - After `ADAPT_N` correct trials are collected, the model is fine-tuned.
+
+---
+
+## 📦 Output Format
+
+After each session, results are saved to:
+
+```
+./results/Subject<id>_Session.pkl
+```
+
+Each session is a list of `trial` dictionaries:
+
+```python
+{
+  'spawn_timestamp': 123456,
+  'spawn_player_x': 200,
+  'spawn_goal_x': 50,
+  'label': 0,  # 0 = left, 1 = right
+  'outcome_timestamp': 123789,
+  'end_player_x': 180,
+  'end_goal_x': 48,
+  'outcome': 'hit',  # or 'miss'
+  'eeg_windows': [np.array(...), ...]  # preprocessed EEG windows
+}
+```
+
+Frame-by-frame game logs are also accessible in `game_states` (in-memory list).
+
+---
+
+## 📊 Analyzing Data
+
+Load the session data like this:
+
+```python
+import pickle
+from config import SUBJECT_ID, RESULTS_DIR
+import os
+
+path = os.path.join(RESULTS_DIR, f"Subject{SUBJECT_ID}_Session.pkl")
+with open(path, 'rb') as f:
+    trials = pickle.load(f)
+
+# Example: count hits
+num_hits = sum(t['outcome'] == 'hit' for t in trials)
+```
+
+---
+
+## 🔧 Extend & Customize
+
+Ideas for customization:
+
+- Replace the GAT with Riemannian methods or DeepConvNet
+- Add a third "no-op" class or rest state
+- Visualize model accuracy in real time
+- Add calibration or scoring screens between levels
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! You can:
+
+- Improve EEG preprocessing (e.g., ICA, ASR)
+- Add new feature extraction methods
+- Optimize adaptation routines
+- Improve UI/UX for participants
+
+Fork the repo and submit a pull request with a clear description of your changes.
+
+---
+
+## 📜 License
+
+MIT License. See `LICENSE.md`.
+
+---
+
+## 👤 Author
+
+Developed by [Rishan Patel](https://github.com/rishanp), UCL PhD Candidate in Brain-Computer Interfaces.
+
+---
+
+## 💡 Citation
+
+If this tool helps your research, feel free to cite or acknowledge the repository. Future publication incoming.
+
+```
+```
