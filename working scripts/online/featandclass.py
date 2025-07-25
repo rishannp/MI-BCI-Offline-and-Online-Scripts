@@ -1,5 +1,3 @@
-# featandclass.py
-
 import numpy as np
 import pickle
 import torch
@@ -72,8 +70,6 @@ class BCIPipeline:
             self.gat = SimpleGAT(in_ch, h1, h2, h3, heads, dropout=0.1)
             self.gat.load_state_dict(sd)
             self.gat.eval()
-
-
         else:
             raise ValueError("Unknown method")
 
@@ -81,6 +77,8 @@ class BCIPipeline:
         self.adapt_N  = ADAPT_N
         self._win_buf = []
         self._lab_buf = []
+
+        self.latest_plv = None  # NEW: store last PLV matrix
 
     def predict(self, window):
         if self.method == 'csp':
@@ -92,6 +90,7 @@ class BCIPipeline:
 
         elif self.method == 'plv':
             adj = plvfcn(window)
+            self.latest_plv = adj  # NEW: save for plotting
             idx = adj.nonzero()
             ei  = torch.tensor(np.vstack(idx), dtype=torch.long)
             ew  = torch.tensor(adj[adj!=0], dtype=torch.float)

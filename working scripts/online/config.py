@@ -12,6 +12,8 @@ TRIALS_PER_LEVEL  = 20        # number of trials per level (used for level‐up 
 TRAINING_DATA   = r"C:\Users\uceerjp\Desktop\PhD\Year 2\online experiments\working scripts\training\training_data.pkl"
 GAT_MODEL_PT    = r"C:\Users\uceerjp\Desktop\PhD\Year 2\online experiments\working scripts\training\best_finetuned_model.pt"
 
+VISUALISE_PLV = False  # Set to False to disable PLV plotting
+
 # Core BCI parameters
 WINDOW_SIZE     = 256 * 3     # 3 s @ 256 Hz
 STEP_SIZE       = 128         # ≈500 ms step (75% overlap)
