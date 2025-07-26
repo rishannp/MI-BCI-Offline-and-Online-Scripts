@@ -2,6 +2,13 @@
 
 Welcome to **BCI Lane Runner**, an adaptive Brain-Computer Interface (BCI) game designed for **real-time online EEG decoding** using CSP or GAT-based classifiers. The player moves left or right to intercept falling targets, controlled entirely by your brain signals (or keyboard fallback for testing). Built for **online adaptation**, model retraining happens seamlessly between levels using correctly classified EEG windows.
 
+It is fair to operate as though this work is to reproduce, and build upon the state-of-the-art literature published here: 
+- https://ieeexplore.ieee.org/abstract/document/1634519
+- https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0123727
+- https://ieeexplore.ieee.org/abstract/document/4015588
+- https://ieeexplore.ieee.org/abstract/document/6177271
+- https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0076214
+
 ---
 
 ## 🏑 Overview
