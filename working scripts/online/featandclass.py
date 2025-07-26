@@ -6,6 +6,7 @@ import torch.nn.functional as F
 
 from torch_geometric.data import Data, DataLoader
 from torch_geometric.nn import GATv2Conv, GraphNorm, global_mean_pool
+from torch_geometric.utils import add_self_loops
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from mne.decoding import CSP
 import scipy.signal as sig
@@ -25,6 +26,28 @@ def plvfcn(eegData: np.ndarray) -> np.ndarray:
             d = phase[:, j] - phase[:, i]
             plv[i, j] = plv[j, i] = abs(np.exp(1j*d).mean())
     return plv
+
+def threshold_graph_edges(plv, topk_percent=0.4):
+    """Returns thresholded edge_index for top X% of PLV connections."""
+    plv = plv.copy()
+    np.fill_diagonal(plv, 0.0)
+    triu_indices = np.triu_indices(plv.shape[0], k=1)
+    edge_weights = plv[triu_indices]
+
+    k = int(len(edge_weights) * topk_percent)
+    if k == 0:
+        k = 1  # Ensure at least one edge
+
+    topk_indices = np.argpartition(edge_weights, -k)[-k:]
+    row = triu_indices[0][topk_indices]
+    col = triu_indices[1][topk_indices]
+
+    edge_index = np.hstack([
+        np.stack([row, col], axis=0),
+        np.stack([col, row], axis=0)
+    ])
+    edge_index, _ = add_self_loops(torch.tensor(edge_index, dtype=torch.long), num_nodes=plv.shape[0])
+    return edge_index
 
 class SimpleGAT(nn.Module):
     def __init__(self, in_ch, h1, h2, h3, heads, dropout):
@@ -78,7 +101,7 @@ class BCIPipeline:
         self._win_buf = []
         self._lab_buf = []
 
-        self.latest_plv = None  # NEW: store last PLV matrix
+        self.latest_plv = None  # for visualization
 
     def predict(self, window):
         if self.method == 'csp':
@@ -90,16 +113,15 @@ class BCIPipeline:
 
         elif self.method == 'plv':
             adj = plvfcn(window)
-            self.latest_plv = adj  # NEW: save for plotting
-            idx = adj.nonzero()
-            ei  = torch.tensor(np.vstack(idx), dtype=torch.long)
-            ew  = torch.tensor(adj[adj!=0], dtype=torch.float)
-            x   = torch.eye(adj.shape[0], dtype=torch.float)
-            data = Data(x=x, edge_index=ei, edge_weight=ew)
+            self.latest_plv = adj.copy()
+
+            edge_index = threshold_graph_edges(adj, topk_percent=0.4)
+            x = torch.eye(adj.shape[0], dtype=torch.float)
+            data = Data(x=x, edge_index=edge_index)
             out  = self.gat(data)
             return int(out.argmax(dim=1).item())
 
-        else:  # 'riemann'
+        else:
             cov = np.cov(window, rowvar=False)[np.newaxis,...]
             ts  = self.riemann_ts.transform(cov)
             return int(self.mdr.predict(ts)[0])
@@ -119,22 +141,19 @@ class BCIPipeline:
             datas = []
             for w, lbl in zip(self._win_buf, self._lab_buf):
                 adj = plvfcn(w)
-                idx = adj.nonzero()
-                ew  = torch.tensor(adj[adj!=0], dtype=torch.float)
-                x   = torch.eye(adj.shape[0], dtype=torch.float)
-                d   = Data(x=x,
-                           edge_index=torch.tensor(np.vstack(idx)),
-                           edge_weight=ew,
-                           y=torch.tensor([lbl]))
+                edge_index = threshold_graph_edges(adj, topk_percent=0.4)
+                x = torch.eye(adj.shape[0], dtype=torch.float)
+                d = Data(x=x, edge_index=edge_index, y=torch.tensor([lbl]))
                 datas.append(d)
+
             loader = DataLoader(datas, batch_size=16, shuffle=True)
-            opt    = torch.optim.Adam(self.gat.parameters(), lr=1e-4)
+            opt = torch.optim.Adam(self.gat.parameters(), lr=1e-4)
             self.gat.train()
             for _ in range(5):
                 for batch in loader:
                     opt.zero_grad()
                     out = self.gat(batch)
-                    loss=F.cross_entropy(out, batch.y)
+                    loss = F.cross_entropy(out, batch.y)
                     loss.backward()
                     opt.step()
             self.gat.eval()
