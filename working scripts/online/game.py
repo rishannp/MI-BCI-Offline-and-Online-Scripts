@@ -1,187 +1,101 @@
 # game.py
 
-import pygame
-import pickle
-import os
-import queue
-import random
+import os, pickle, random, pygame, queue
+from config import SUBJECT_DIR, SESSION_DIR, NUM_LEVELS, TRIALS_PER_LEVEL
 
-from config import SUBJECT_ID, RESULTS_DIR, NUM_LEVELS, TRIALS_PER_LEVEL
-
-# ─── CONSTANTS ─────────────────────────────────────────────────────────
-GOAL_SPEED         = 1
-PLAYER_SPEED       = 1
-PLAYER_RADIUS      = 15
-GOAL_WIDTH         = 50
-GOAL_HEIGHT        = 20
-FPS                = 60
-MIN_SPAWN_DISTANCE = 100
-GREY               = (128,128,128)
-GREEN              = (0,255,0)
+# CONSTANTS
+GOAL_SPEED, PLAYER_SPEED = 1,1
+PLAYER_RADIUS, GOAL_WIDTH, GOAL_HEIGHT = 15,50,20
+FPS, MIN_SPAWN_DISTANCE = 60, 100
+GREY, GREEN = (128,128,128), (0,255,0)
 
 def run_game(action_queue, adapt_queue, game_states, label_queue, raw_eeg_log):
     pygame.init()
-    WIDTH, HEIGHT = 400, 600
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode((400,600))
     pygame.display.set_caption("Lane Runner")
-    font = pygame.font.Font(None, 36)
+    font = pygame.font.Font(None,36)
 
-    BG, PC, GC, TC = (31,41,51), (59,130,246), (249,115,22), (229,231,235)
-    mid_spawn = (WIDTH - GOAL_WIDTH)//2
+    BG, PC, GC, TC = (31,41,51),(59,130,246),(249,115,22),(229,231,235)
+    mid = (400 - GOAL_WIDTH)//2
 
-    level = 1
-    trial_in_level = 0
-    hits, misses = 0, 0
-    level_data = []
+    level=1; trial_in=0; hits=0; misses=0; data=[]
+    px,py=200,600-PLAYER_RADIUS*2
+    last_cmd=None; last_adapt=0; adapt_dur=0
 
-    px = WIDTH//2
-    py = HEIGHT - PLAYER_RADIUS*2
-    last_cmd = None
+    def spawn_list(): 
+        s=[0]*(TRIALS_PER_LEVEL//2)+[1]*(TRIALS_PER_LEVEL//2)
+        if TRIALS_PER_LEVEL%2: s.append(random.choice([0,1]))
+        random.shuffle(s); return s
 
-    last_adapt_ts = -999999
-    adapt_msg_duration = 0
+    spawns=spawn_list(); side=spawns[0]
+    goal=pygame.Rect(* (random.randint(0,mid) if side==0 else random.randint(mid+1,400-GOAL_WIDTH),
+                        -GOAL_HEIGHT), GOAL_WIDTH, GOAL_HEIGHT)
+    spawn_ts, spawn_px, spawn_gx = 0,px,goal.x
+    trial_wins=[]; last_win=None
+    clock=pygame.time.Clock(); run=True
 
-    def make_spawn_sides():
-        half = TRIALS_PER_LEVEL//2
-        sides = [0]*half + [1]*half
-        if TRIALS_PER_LEVEL % 2:
-            sides.append(random.choice([0,1]))
-        random.shuffle(sides)
-        return sides
+    while run and level<=NUM_LEVELS:
+        ts=pygame.time.get_ticks(); screen.fill(BG)
 
-    def spawn_goal(side):
-        if side == 0:
-            xmin, xmax = 0, mid_spawn
-            dm = px - MIN_SPAWN_DISTANCE - GOAL_WIDTH//2
-            if dm >= xmin: xmax = min(xmax, dm)
-        else:
-            xmin, xmax = mid_spawn+1, WIDTH-GOAL_WIDTH
-            dm = px + MIN_SPAWN_DISTANCE - GOAL_WIDTH//2
-            if dm <= xmax: xmin = max(xmin, dm)
-        if xmin > xmax:
-            xmin, xmax = (0,mid_spawn) if side==0 else (mid_spawn+1,WIDTH-GOAL_WIDTH)
-        return pygame.Rect(random.randint(xmin,xmax), -GOAL_HEIGHT, GOAL_WIDTH, GOAL_HEIGHT)
-
-    spawn_sides = make_spawn_sides()
-    side = spawn_sides[0]
-    goal = spawn_goal(side)
-    spawn_ts = pygame.time.get_ticks()
-    spawn_px, spawn_gx, spawn_label = px, goal.x, side
-
-    trial_windows = []
-    last_window_id = None
-
-    clock = pygame.time.Clock()
-    running = True
-
-    while running and level <= NUM_LEVELS:
-        ts = pygame.time.get_ticks()
-        screen.fill(BG)
-
-        # adaptation signal
         try:
-            duration_ms = adapt_queue.get_nowait()
-            last_adapt_ts = ts
-            adapt_msg_duration = duration_ms
-        except queue.Empty:
-            pass
+            d=adapt_queue.get_nowait(); last_adapt=ts; adapt_dur=d
+        except queue.Empty: pass
 
-        # input
         for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                running = False
+            if e.type==pygame.QUIT: run=False
 
-        keys = pygame.key.get_pressed()
-        moved = False
-        if keys[pygame.K_LEFT] and px-PLAYER_RADIUS > 0:
-            px -= PLAYER_SPEED; moved = True
-        if keys[pygame.K_RIGHT] and px+PLAYER_RADIUS < WIDTH:
-            px += PLAYER_SPEED; moved = True
+        keys=pygame.key.get_pressed(); moved=False
+        if keys[pygame.K_LEFT] and px-PLAYER_RADIUS>0: px-=PLAYER_SPEED; moved=True
+        if keys[pygame.K_RIGHT] and px+PLAYER_RADIUS<400: px+=PLAYER_SPEED; moved=True
 
-        try:
-            cmd = action_queue.get_nowait()
-            last_cmd = cmd
-        except queue.Empty:
-            cmd = last_cmd
+        try: cmd=action_queue.get_nowait(); last_cmd=cmd
+        except queue.Empty: cmd=last_cmd
 
         if not moved and cmd is not None:
-            if cmd == 0 and px-PLAYER_RADIUS > 0:
-                px -= PLAYER_SPEED
-            elif cmd == 1 and px+PLAYER_RADIUS < WIDTH:
-                px += PLAYER_SPEED
+            if cmd==0 and px-PLAYER_RADIUS>0: px-=PLAYER_SPEED
+            if cmd==1 and px+PLAYER_RADIUS<400: px+=PLAYER_SPEED
 
-        # move goal & collect windows
-        goal.y += GOAL_SPEED
+        goal.y+=GOAL_SPEED
         if raw_eeg_log:
-            w = raw_eeg_log[0]
-            if id(w) != last_window_id:
-                trial_windows.append(w.copy())
-                last_window_id = id(w)
+            w=raw_eeg_log[0]
+            if id(w)!=last_win: trial_wins.append(w.copy()); last_win=id(w)
 
-        # check trial end
-        player_rect = pygame.Rect(px-PLAYER_RADIUS, py-PLAYER_RADIUS,
-                                  PLAYER_RADIUS*2, PLAYER_RADIUS*2)
-        outcome = None
-        if player_rect.colliderect(goal):
-            outcome = 'hit'; hits += 1
-        elif goal.y > HEIGHT:
-            outcome = 'miss'; misses += 1
+        player_rect=pygame.Rect(px-PLAYER_RADIUS,py-PLAYER_RADIUS,PLAYER_RADIUS*2,PLAYER_RADIUS*2)
+        outcome=None
+        if player_rect.colliderect(goal): outcome='hit'; hits+=1
+        elif goal.y>600: outcome='miss'; misses+=1
 
         if outcome:
-            # send all windows to adaptation
-            label_queue.put((spawn_label, trial_windows.copy()))
+            label_queue.put((side, trial_wins.copy()))
+            data.append({
+                'spawn_ts':spawn_ts,'spawn_px':spawn_px,'spawn_gx':spawn_gx,
+                'label':side,'outcome_ts':ts,'end_px':px,'end_gx':goal.x,
+                'outcome':outcome,'eeg_wins':trial_wins.copy()
+            })
+            trial_in+=1
+            if trial_in>=TRIALS_PER_LEVEL:
+                trial_in=0; level+=1; spawns=spawn_list()
+            side=spawns[trial_in]
+            goal=pygame.Rect(*(random.randint(0,mid) if side==0 else random.randint(mid+1,400-GOAL_WIDTH),
+                              -GOAL_HEIGHT),GOAL_WIDTH,GOAL_HEIGHT)
+            spawn_ts=ts; spawn_px,spawn_gx=px,goal.x
+            trial_wins=[]; last_win=None
 
-            trial_data = {
-                'spawn_timestamp':   spawn_ts,
-                'spawn_player_x':    spawn_px,
-                'spawn_goal_x':      spawn_gx,
-                'label':             spawn_label,
-                'outcome_timestamp': ts,
-                'end_player_x':      px,
-                'end_goal_x':        goal.x,
-                'outcome':           outcome,
-                'eeg_windows':       trial_windows.copy()
-            }
-            level_data.append(trial_data)
+        game_states.append({'ts':ts,'pp':(px,py),'gp':(goal.x,goal.y),'lvl':level,'hit':outcome=='hit'})
 
-            trial_in_level += 1
-            if trial_in_level >= TRIALS_PER_LEVEL:
-                level += 1
-                trial_in_level = 0
-                spawn_sides = make_spawn_sides()
+        pygame.draw.circle(screen,PC,(px,py),PLAYER_RADIUS)
+        pygame.draw.rect(screen,GC,goal,border_radius=10)
+        screen.blit(font.render(f"Level {level}/{NUM_LEVELS}",True,TC),(10,10))
+        screen.blit(font.render(f"Hits {hits}  Misses {misses}",True,TC),(10,50))
 
-            side = spawn_sides[trial_in_level]
-            goal = spawn_goal(side)
-            spawn_ts = pygame.time.get_ticks()
-            spawn_px, spawn_gx, spawn_label = px, goal.x, side
-            trial_windows = []
-            last_window_id = None
+        color=GREEN if (ts-last_adapt)<adapt_dur else GREY
+        screen.blit(font.render("Adapting",True,color),(260,10))
 
-        # log frame
-        game_states.append({
-            'timestamp': ts,
-            'player_pos': (px, py),
-            'goal_pos':   (goal.x, goal.y),
-            'level':      level,
-            'hit':        (outcome == 'hit')
-        })
+        pygame.display.flip(); clock.tick(FPS)
 
-        # draw
-        pygame.draw.circle(screen, PC, (px, py), PLAYER_RADIUS)
-        pygame.draw.rect(screen, GC, goal, border_radius=10)
-        screen.blit(font.render(f"Level {level}/{NUM_LEVELS}", True, TC), (10, 10))
-        screen.blit(font.render(f"Hits {hits}  Misses {misses}", True, TC), (10, 50))
-
-        # adapt indicator
-        color = GREEN if (ts - last_adapt_ts) < adapt_msg_duration else GREY
-        screen.blit(font.render("Adapting", True, color), (WIDTH-140, 10))
-
-        pygame.display.flip()
-        clock.tick(FPS)
-
-    # save
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-    with open(os.path.join(RESULTS_DIR, f"Subject{SUBJECT_ID}_Session.pkl"), 'wb') as f:
-        pickle.dump(level_data, f)
+    # save everything
+    os.makedirs(SESSION_DIR,exist_ok=True)
+    with open(os.path.join(SESSION_DIR,"session_data.pkl"),"wb") as f:
+        pickle.dump(data,f)
 
     pygame.quit()

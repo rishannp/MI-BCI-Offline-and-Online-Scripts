@@ -1,5 +1,9 @@
-import numpy as np
+# featandclass.py
+
+import os
+import json
 import pickle
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,7 +15,11 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from mne.decoding import CSP
 import scipy.signal as sig
 
-from config import ADAPTATION, ADAPT_N, TRAINING_DATA, GAT_MODEL_PT
+from config import (
+    METHOD, ADAPTATION, ADAPT_N,
+    TRAINING_DATA, GAT_MODEL_PT,
+    SUBJECT_DIR, SESSION_DIR
+)
 
 # Load training data once
 _tr = pickle.load(open(TRAINING_DATA, 'rb'))
@@ -28,29 +36,22 @@ def plvfcn(eegData: np.ndarray) -> np.ndarray:
     return plv
 
 def threshold_graph_edges(plv, topk_percent=0.4):
-    """Returns thresholded edge_index for top X% of PLV connections."""
     plv = plv.copy()
     np.fill_diagonal(plv, 0.0)
-    triu_indices = np.triu_indices(plv.shape[0], k=1)
-    edge_weights = plv[triu_indices]
-
-    k = int(len(edge_weights) * topk_percent)
-    if k == 0:
-        k = 1  # Ensure at least one edge
-
-    topk_indices = np.argpartition(edge_weights, -k)[-k:]
-    row = triu_indices[0][topk_indices]
-    col = triu_indices[1][topk_indices]
-
-    edge_index = np.hstack([
-        np.stack([row, col], axis=0),
-        np.stack([col, row], axis=0)
-    ])
-    edge_index, _ = add_self_loops(torch.tensor(edge_index, dtype=torch.long), num_nodes=plv.shape[0])
+    triu = np.triu_indices(plv.shape[0], k=1)
+    weights = plv[triu]
+    k = max(1, int(len(weights) * topk_percent))
+    idx = np.argpartition(weights, -k)[-k:]
+    row, col = triu[0][idx], triu[1][idx]
+    edge_index = np.hstack([np.stack([row,col]), np.stack([col,row])])
+    edge_index, _ = add_self_loops(
+        torch.tensor(edge_index, dtype=torch.long),
+        num_nodes=plv.shape[0]
+    )
     return edge_index
 
 class SimpleGAT(nn.Module):
-    def __init__(self, in_ch, h1, h2, h3, heads, dropout):
+    def __init__(self, in_ch, h1, h2, h3, heads, dropout=0.1):
         super().__init__()
         self.conv1 = GATv2Conv(in_ch, h1, heads=heads, concat=True, dropout=dropout)
         self.gn1   = GraphNorm(h1*heads)
@@ -69,10 +70,11 @@ class SimpleGAT(nn.Module):
         return self.lin(x)
 
 class BCIPipeline:
-    def __init__(self, method, fs=256):
+    def __init__(self, method=METHOD, fs=256):
         self.method = method.lower()
         self.fs     = fs
 
+        # load static model
         if self.method == 'csp':
             filters   = _tr['filters']
             coef      = _tr['lda_coef']
@@ -86,45 +88,39 @@ class BCIPipeline:
         elif self.method == 'plv':
             sd = torch.load(GAT_MODEL_PT, map_location='cpu')
             heads = sd['conv1.att'].shape[1]
-            h1    = sd['conv1.att'].shape[2]
-            h2    = sd['conv2.att'].shape[2]
-            h3    = sd['conv3.att'].shape[2]
+            h1, h2, h3 = sd['conv1.att'].shape[2], sd['conv2.att'].shape[2], sd['conv3.att'].shape[2]
             in_ch = sd['conv1.lin_l.weight'].shape[1]
-            self.gat = SimpleGAT(in_ch, h1, h2, h3, heads, dropout=0.1)
+            self.gat = SimpleGAT(in_ch, h1, h2, h3, heads)
             self.gat.load_state_dict(sd)
             self.gat.eval()
         else:
-            raise ValueError("Unknown method")
+            raise ValueError(f"Unknown method {self.method!r}")
 
         self.adaptive = ADAPTATION
         self.adapt_N  = ADAPT_N
         self._win_buf = []
         self._lab_buf = []
-
-        self.latest_plv = None  # for visualization
+        self.latest_plv = None
 
     def predict(self, window):
         if self.method == 'csp':
-            arr  = window.T[np.newaxis,...]
+            arr = window.T[np.newaxis,...]
             feat = self.csp.transform(arr)
-            var  = np.var(feat, axis=2) if feat.ndim==3 else np.var(feat,axis=1,keepdims=True)
-            vec  = np.log(var).ravel()
+            vec = np.log(np.var(feat, axis=(1,2))).ravel()
             return int(self.lda.predict([vec])[0])
 
-        elif self.method == 'plv':
-            adj = plvfcn(window)
-            self.latest_plv = adj.copy()
-
-            edge_index = threshold_graph_edges(adj, topk_percent=0.4)
-            x = torch.eye(adj.shape[0], dtype=torch.float)
-            data = Data(x=x, edge_index=edge_index)
-            out  = self.gat(data)
+        # PLV path
+        adj = plvfcn(window)
+        self.latest_plv = adj.copy()
+        if self.method == 'plv':
+            ei = threshold_graph_edges(adj, topk_percent=0.4)
+            x  = torch.eye(adj.shape[0])
+            data = Data(x=x, edge_index=ei)
+            out = self.gat(data)
             return int(out.argmax(dim=1).item())
 
-        else:
-            cov = np.cov(window, rowvar=False)[np.newaxis,...]
-            ts  = self.riemann_ts.transform(cov)
-            return int(self.mdr.predict(ts)[0])
+        # fallback
+        raise RuntimeError("Invalid method")
 
     def adapt(self):
         if not self.adaptive or len(self._win_buf) < self.adapt_N:
@@ -136,20 +132,24 @@ class BCIPipeline:
             self.csp.fit(X, y)
             feats = np.log(np.var(self.csp.transform(X), axis=2))
             self.lda.fit(feats, y)
+            # save updated CSP+LDA
+            with open(os.path.join(SESSION_DIR, "csp_lda_updated.pkl"), 'wb') as f:
+                pickle.dump({'filters':self.csp.filters_,
+                             'lda_coef':self.lda.coef_,
+                             'lda_intercept':self.lda.intercept_},
+                            f)
 
-        elif self.method == 'plv':
+        else:  # plv
             datas = []
             for w, lbl in zip(self._win_buf, self._lab_buf):
                 adj = plvfcn(w)
-                edge_index = threshold_graph_edges(adj, topk_percent=0.4)
-                x = torch.eye(adj.shape[0], dtype=torch.float)
-                d = Data(x=x, edge_index=edge_index, y=torch.tensor([lbl]))
-                datas.append(d)
-
+                ei  = threshold_graph_edges(adj, topk_percent=0.4)
+                x   = torch.eye(adj.shape[0])
+                datas.append(Data(x=x, edge_index=ei, y=torch.tensor([lbl])))
             loader = DataLoader(datas, batch_size=16, shuffle=True)
             opt = torch.optim.Adam(self.gat.parameters(), lr=1e-4)
             self.gat.train()
-            for _ in range(5):
+            for _ in range(5): # NUMBER OF EPOCHS for Adaptation
                 for batch in loader:
                     opt.zero_grad()
                     out = self.gat(batch)
@@ -157,6 +157,8 @@ class BCIPipeline:
                     loss.backward()
                     opt.step()
             self.gat.eval()
+            # save updated GAT
+            torch.save(self.gat.state_dict(), os.path.join(SESSION_DIR, "gat_updated.pt"))
 
         self._win_buf.clear()
         self._lab_buf.clear()
