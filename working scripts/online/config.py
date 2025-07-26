@@ -9,7 +9,7 @@ ADAPT_N       = 10         # how many windows to accumulate before adapting
 
 # ─── GAME PARAMETERS ────────────────────────────────────────────────────
 NUM_LEVELS        = 10     # total number of levels
-TRIALS_PER_LEVEL  = 20     # trials per level
+TRIALS_PER_LEVEL  = 20     # trials per level - https://infoscience.epfl.ch/server/api/core/bitstreams/548d8f37-01c2-4d4f-86b0-717797e9b8a8/content
 
 # ─── DATA / MODEL PATHS ─────────────────────────────────────────────────
 # Paths to exact training artifacts
