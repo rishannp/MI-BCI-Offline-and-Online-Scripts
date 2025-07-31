@@ -28,7 +28,7 @@ THRESHOLD       = 3
 SAMPLING_RATE   = 256
 
 # ─── SUBJECT & SESSION ──────────────────────────────────────────────────
-SUBJECT_ID      = "001"     # change per participant
+SUBJECT_ID      = "000"     # change per participant
 SESSION_ID      = "001"     # change per session
 RESULTS_DIR     = "./results"  # base output dir
 

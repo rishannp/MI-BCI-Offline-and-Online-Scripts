@@ -1,0 +1,84 @@
+Impedance measurement on 2025-07-30_18:21:31 (UTC+01:00)
+
+Devices: HA-2025.03.05
+Ch.no. 	Channel name 	Impedance values (kilo-ohm)
+     1 	1            	channel not selected
+     2 	2            	18.0
+     3 	3            	13.4
+     4 	4            	15.4
+     5 	5            	19.5
+     6 	6            	35.8
+     7 	7            	13.9
+     8 	8            	31.5
+     9 	9            	47.4
+    10 	10           	69.7
+    11 	11           	22.9
+    12 	12           	44.0
+    13 	13           	94.4
+    14 	14           	81.3
+    15 	15           	64.3
+    16 	16           	32.9
+    17 	17           	20.0
+    18 	18           	92.6
+    19 	19           	20.8
+    20 	20           	95.8
+    21 	21           	30.7
+    22 	22           	52.2
+    23 	23           	48.1
+    24 	24           	103.5
+    25 	25           	15.6
+    26 	26           	10.6
+    27 	27           	120.9
+    28 	28           	21.3
+    29 	29           	16.0
+    30 	30           	50.6
+    31 	31           	15.7
+    32 	32           	74.4
+    33 	33           	74.3
+    34 	34           	16.5
+    35 	35           	22.1
+    36 	36           	65.4
+    37 	37           	3.3
+    38 	38           	25.6
+    39 	39           	28.2
+    40 	40           	33.9
+    41 	41           	55.9
+    42 	42           	38.6
+    43 	43           	6.3
+    44 	44           	15.2
+    45 	45           	129.9
+    46 	46           	14.5
+    47 	47           	6.9
+    48 	48           	73.1
+    49 	49           	10.9
+    50 	50           	23.2
+    51 	51           	17.2
+    52 	52           	16.3
+    53 	53           	84.9
+    54 	54           	59.6
+    55 	55           	12.6
+    56 	56           	50.4
+    57 	57           	52.0
+    58 	58           	71.8
+    59 	59           	91.9
+    60 	60           	41.7
+    61 	61           	9.6
+    62 	62           	10.6
+    63 	63           	channel not selected
+    64 	64           	channel not selected
+    65 	65           	channel not selected
+    66 	66           	channel not selected
+    67 	67           	channel not selected
+    68 	68           	channel not selected
+    69 	69           	channel not selected
+    70 	70           	channel not selected
+    71 	71           	channel not selected
+    72 	72           	channel not selected
+    73 	73           	channel not selected
+    74 	74           	channel not selected
+    75 	75           	channel not selected
+    76 	76           	channel not selected
+    77 	77           	channel not selected
+    78 	78           	channel not selected
+    79 	79           	channel not selected
+    80 	80           	channel not selected

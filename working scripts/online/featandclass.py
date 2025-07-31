@@ -23,7 +23,7 @@ from config import (
 
 # Load training data once
 _tr = pickle.load(open(TRAINING_DATA, 'rb'))
-n_channels = _tr['data'].shape[2]
+n_channels = 58
 
 def plvfcn(eegData: np.ndarray) -> np.ndarray:
     phase = np.angle(sig.hilbert(eegData, axis=0))
@@ -35,7 +35,7 @@ def plvfcn(eegData: np.ndarray) -> np.ndarray:
             plv[i, j] = plv[j, i] = abs(np.exp(1j*d).mean())
     return plv
 
-def threshold_graph_edges(plv, topk_percent=0.4):
+def threshold_graph_edges(plv, topk_percent=0.5):
     plv = plv.copy()
     np.fill_diagonal(plv, 0.0)
     triu = np.triu_indices(plv.shape[0], k=1)
@@ -111,6 +111,8 @@ class BCIPipeline:
 
         # PLV path
         adj = plvfcn(window)
+        # print(adj.shape)
+        adj = -np.log(1.0 - adj + 1e-6)  # Log transform to enhance discriminability
         self.latest_plv = adj.copy()
         if self.method == 'plv':
             ei = threshold_graph_edges(adj, topk_percent=0.4)
@@ -143,7 +145,8 @@ class BCIPipeline:
             datas = []
             for w, lbl in zip(self._win_buf, self._lab_buf):
                 adj = plvfcn(w)
-                ei  = threshold_graph_edges(adj, topk_percent=0.4)
+                adj = -np.log(1.0 - adj + 1e-6)  # Log transform to enhance discriminability
+                ei  = threshold_graph_edges(adj, topk_percent=0.5)
                 x   = torch.eye(adj.shape[0])
                 datas.append(Data(x=x, edge_index=ei, y=torch.tensor([lbl])))
             loader = DataLoader(datas, batch_size=16, shuffle=True)

@@ -66,7 +66,7 @@ event.waitKeys()
 # Training configuration
 cue_duration = 5  # seconds
 inter_trial_interval = 5  # seconds
-num_trials_per_class = 3
+num_trials_per_class = 10
 sampling_rate = int(stream_details["sampling_rate"])  # e.g., 256 Hz
 samples_per_cue = int(cue_duration * sampling_rate)
 
@@ -237,28 +237,21 @@ def train_csp_lda(eeg_data: np.ndarray,
                   classes: tuple = (1, 2)) -> dict:
     """
     Train CSP + LDA on calibration EEG data, labeling each trial by the first marker sample.
-
-    Args:
-        eeg_data: array shape (n_trials, n_times, n_channels)
-        event_markers: array shape (n_trials, n_times), values {0,1,2}
-        sfreq: sampling frequency in Hz
-        n_components: number of spatial patterns to retain per class
-        classes: tuple of class labels to include (ignore rest=0)
-
-    Returns:
-        model_dict containing:
-          - 'csp': trained CSP object
-          - 'lda': trained LDA object
-          - 'filters': spatial filters (patterns)
-          - 'lda_coef': LDA weight vector
-          - 'lda_intercept': LDA intercept
     """
+    # pull out the first marker per trial as the class label
     first_labels = event_markers[:, 0]
     mask = np.isin(first_labels, classes)
-    X = eeg_data[mask]
-    X = np.transpose(X, (0, 2, 1))  # to shape (n_epochs, n_channels, n_times)
+
+    # select and reshape only the trials we care about
+    X = eeg_data[mask]                                 # shape (n_epochs, n_times, n_channels)
+    X = np.transpose(X, (0, 2, 1))                     # ➔ (n_epochs, n_channels, n_times)
     y = first_labels[mask]
 
+    # ensure we have double‐precision floats (MNE RawArray will require float64)
+    # I convert here so RawArray(copy=None) won’t complain.
+    X = X.astype(np.float64)
+
+    # now fit CSP and LDA as before
     csp = CSP(n_components=4, reg=None, log=True, norm_trace=False)
     csp.fit(X, y)
     X_csp = csp.transform(X)
@@ -392,10 +385,7 @@ print("training_data.pkl updated with CSP, LDA and PLV entries.")
 
 
 #%% Finetune GAT
-
-import os
 import pickle
-
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -408,24 +398,83 @@ from torch_geometric.seed import seed_everything
 # ---------------------------
 # CONFIG
 # ---------------------------
-pretrained_path = r'C:\Users\uceerjp\Desktop\PhD\Year 2\online experiments\working scripts\training\best_gat_model.pt'
-finetune_epochs = 15
-batch_size      = 32
-lr              = 1e-4
-dropout         = 0.1
-h1, h2, h3      = 32, 16, 8
-heads           = 7
-topk_percent    = 0.4
-use_subset      = False
+pretrained_path  = r'C:\Users\uceerjp\Desktop\PhD\Year 2\online experiments\working scripts\training\best_gat_model.pt'
+finetune_epochs  = 15
+batch_size       = 32
+lr               = 1e-4
+dropout          = 0.1
+h1, h2, h3       = 32, 16, 8
+heads            = 7
+topk_percent     = 0.5
+epsilon          = 1e-6
 
-# Force CPU usage only
 seed_everything(12345)
-device = torch.device('cpu')  # use CPU only
+device = torch.device('cpu')
 
 # ---------------------------
-# YOUR ELECTRODE INDICES
+# ELECTRODE SUBSET SETUP
 # ---------------------------
-subset_indices = None  # e.g. [0,2,5,7] if using subset else None
+stieger_electrodes = [
+    'FP1','FPZ','FP2','AF3','AF4','F7','F5','F3','F1','FZ','F2','F4','F6','F8',
+    'FT7','FC5','FC3','FC1','FCZ','FC2','FC4','FC6','FT8',
+    'T7','C5','C3','C1','CZ','C2','C4','C6','T8',
+    'TP7','CP5','CP3','CP1','CPZ','CP2','CP4','CP6','TP8',
+    'P7','P5','P3','P1','PZ','P2','P4','P6','P8',
+    'PO7','PO5','PO3','POZ','PO4','PO6','PO8',
+    'CB1','O1','OZ','O2','CB2'
+]
+
+headset_electrodes = [
+    'FP1','FPz','FP2','AF7','AF3','AF4','AF8','F7','F5','F3',
+    'F1','Fz','F2','F4','F6','F8','FT7','FC5','FC3','FC1','FCz',
+    'FC2','FC4','FC6','FT8','T7','C5','C3','C1','Cz','C2','C4',
+    'C6','T8','TP7','CP5','CP3','CP1','CPz','CP2','CP4','CP6',
+    'TP8','P7','P5','P3','P1','Pz','P2','P4','P6','P8','PO7',
+    'PO3','POz','PO4','PO8','O1','Oz','O2','F9','F10'
+]
+
+# Upper‐case for matching
+stieger_up = [e.upper() for e in stieger_electrodes]
+headset_up = [e.upper() for e in headset_electrodes]
+
+# Build subset_indices
+subset_indices = []
+missing = []
+for ch in headset_up:
+    if ch in stieger_up:
+        subset_indices.append(stieger_up.index(ch))
+    else:
+        missing.append(ch)
+
+print(f"🔹 Found {len(subset_indices)} shared channels.")
+if missing:
+    print(f"⚠️ These headset channels were not in the Stieger list (skipped): {missing}")
+
+# Verify against the trained‑model list
+trained_list = [
+    'FP1','FPz','FP2','AF3','AF4','F7','F5','F3','F1','Fz',
+    'F2','F4','F6','F8','FT7','FC5','FC3','FC1','FCz','FC2',
+    'FC4','FC6','FT8','T7','C5','C3','C1','Cz','C2','C4',
+    'C6','T8','TP7','CP5','CP3','CP1','CPz','CP2','CP4','CP6',
+    'TP8','P7','P5','P3','P1','Pz','P2','P4','P6','P8','PO7',
+    'PO3','POz','PO4','PO8','O1','Oz','O2'
+]
+trained_up = [e.upper() for e in trained_list]
+
+# Kept electrodes (from Stieger order) in your streaming order
+kept_up = [stieger_up[idx] for idx in subset_indices]
+print("📌 Kept electrodes (uppercase):")
+print(kept_up)
+
+if kept_up == trained_up:
+    print("✅ Kept electrodes match the trained‑model list exactly.")
+else:
+    print("❌ Mismatch between kept electrodes and trained‑model list!")
+    # Optionally print differences
+    extra = [e for e in kept_up if e not in trained_up]
+    missing_from_kept = [e for e in trained_up if e not in kept_up]
+    print(f"   Extra: {extra}")
+    print(f"   Missing: {missing_from_kept}")
 
 # ---------------------------
 # GAT MODEL DEFINITION
@@ -433,14 +482,11 @@ subset_indices = None  # e.g. [0,2,5,7] if using subset else None
 class SimpleGAT(nn.Module):
     def __init__(self, in_channels, h1, h2, h3, num_heads, dropout):
         super().__init__()
-        self.conv1 = GATv2Conv(in_channels, h1, heads=num_heads,
-                               concat=True, dropout=dropout)
+        self.conv1 = GATv2Conv(in_channels, h1, heads=num_heads, concat=True, dropout=dropout)
         self.gn1   = GraphNorm(h1 * num_heads)
-        self.conv2 = GATv2Conv(h1 * num_heads, h2, heads=num_heads,
-                               concat=True, dropout=dropout)
+        self.conv2 = GATv2Conv(h1 * num_heads, h2, heads=num_heads, concat=True, dropout=dropout)
         self.gn2   = GraphNorm(h2 * num_heads)
-        self.conv3 = GATv2Conv(h2 * num_heads, h3, heads=num_heads,
-                               concat=False, dropout=dropout)
+        self.conv3 = GATv2Conv(h2 * num_heads, h3, heads=num_heads, concat=False, dropout=dropout)
         self.gn3   = GraphNorm(h3)
         self.lin   = nn.Linear(h3, 2)
 
@@ -455,67 +501,62 @@ class SimpleGAT(nn.Module):
 # ---------------------------
 # GRAPH PREPROCESSING
 # ---------------------------
-def preprocess_graph(data, topk_percent=0.4):
+def preprocess_graph(data, topk=topk_percent):
     plv = data.x.clone().detach()
-    if subset_indices is not None:
+    if subset_indices:
         plv = plv[subset_indices][:, subset_indices]
-    num_nodes = plv.size(0)
+    N = plv.size(0)
     plv.fill_diagonal_(0.0)
-
-    triu = torch.triu_indices(num_nodes, num_nodes, offset=1)
+    plv = -torch.log(1.0 - plv + epsilon)
+    triu = torch.triu_indices(N, N, offset=1)
     weights = plv[triu[0], triu[1]]
-    k = int(weights.numel() * topk_percent)
-    topk = torch.topk(weights, k=k, sorted=False).indices
-
-    row = triu[0][topk]
-    col = triu[1][topk]
+    k = int(weights.numel() * topk)
+    topk_idx = torch.topk(weights, k=k, sorted=False).indices
+    row = triu[0][topk_idx]; col = triu[1][topk_idx]
     edge_index = torch.cat([
         torch.stack([row, col], dim=0),
         torch.stack([col, row], dim=0)
     ], dim=1)
-    edge_index, _ = add_self_loops(edge_index, num_nodes=num_nodes)
-
+    edge_index, _ = add_self_loops(edge_index, num_nodes=N)
+    data.x = plv
     data.edge_index = edge_index
+    data.pop('edge_attr', None)
     return data
 
 # ---------------------------
-# LOAD YOUR CALIBRATION DATA
+# LOAD & BUILD GRAPH LIST
 # ---------------------------
-with open('training_data.pkl', 'rb') as f:
+with open('training_data.pkl','rb') as f:
     saved = pickle.load(f)
-plv_array    = saved['plv_array']    # shape = (N_windows, n_elec, n_elec)
-label_vector = saved['label_vector'] # shape = (N_windows,)
+plv_array    = saved['plv_array']    # (W,64,64)
+label_vector = saved['label_vector'] # (W,)
 
-# ---------------------------
-# BUILD PyG DATA LIST (filtering only classes 1 and 2)
 new_graphs = []
 for i in range(plv_array.shape[0]):
-    raw_label = label_vector[i]
-    # skip rest class (0)
-    if raw_label not in (1, 2):
-        continue
+    lbl = label_vector[i]
+    if lbl not in (1,2): continue
     plv = torch.tensor(plv_array[i], dtype=torch.float)
-    # remap labels from {1,2} to {0,1}
-    y = torch.tensor(raw_label - 1, dtype=torch.long)
-    data = Data(x=plv, y=y)
-    new_graphs.append(preprocess_graph(data, topk_percent))
+    y   = torch.tensor(lbl-1, dtype=torch.long)
+    data= Data(x=plv, y=y)
+    new_graphs.append(preprocess_graph(data))
+
+loader = DataLoader(new_graphs, batch_size=batch_size, shuffle=True)
 
 # ---------------------------
-# DATA LOADER
-loader = DataLoader(new_graphs, batch_size=batch_size, shuffle=True)
+# LOAD MODEL & FINETUNE
 # ---------------------------
-# infer in_channels from one graph after preprocessing
 in_feats = new_graphs[0].x.size(1)
+print(f"▶ Input feature dimension = {in_feats} nodes")
 model = SimpleGAT(in_feats, h1, h2, h3, heads, dropout).to(device)
-# load weights onto CPU
-state = torch.load(pretrained_path, map_location='cpu')
+
+state = torch.load(pretrained_path, map_location=device)
 model.load_state_dict(state)
 model.train()
 
-opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+opt  = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
 crit = nn.CrossEntropyLoss()
 
-best_acc = 0.0
+best_acc        = 0.0
 best_model_path = 'best_finetuned_model.pt'
 
 for epoch in range(1, finetune_epochs+1):
@@ -524,17 +565,19 @@ for epoch in range(1, finetune_epochs+1):
         batch = batch.to(device)
         opt.zero_grad()
         logits = model(batch)
-        loss = crit(logits, batch.y)
+        loss   = crit(logits, batch.y)
         loss.backward()
         opt.step()
-        preds = logits.argmax(dim=1)
+
+        preds   = logits.argmax(dim=1)
         correct += (preds == batch.y).sum().item()
-        total += batch.num_graphs
-    epoch_acc = correct / total
-    # save best model
+        total   += batch.num_graphs
+
+    epoch_acc = correct/total
     if epoch_acc > best_acc:
         best_acc = epoch_acc
         torch.save(model.state_dict(), best_model_path)
+
     print(f"Epoch {epoch}/{finetune_epochs}  Acc: {epoch_acc:.2%}  Best: {best_acc:.2%}")
 
-print(f"Best fine-tuned model saved to {best_model_path} with Acc: {best_acc:.2%}")
+print(f"✅ Done. Best model saved to {best_model_path} (Acc: {best_acc:.2%})")

@@ -32,7 +32,7 @@ def main():
 
     # PLV visualiser
     def plv_visualiser():
-        fig, ax = plt.subplots(figsize=(6,6))
+        fig, ax = plt.subplots(figsize=(3,3))
         im = ax.imshow(np.zeros((n_channels,n_channels)), cmap='viridis', vmin=0, vmax=1)
         ax.set_title("Live PLV")
         plt.colorbar(im, ax=ax)
@@ -52,7 +52,14 @@ def main():
             proc = preprocess_window(win)
             if proc is None: continue
             raw_eeg_log.clear(); raw_eeg_log.append(proc)
-            cmd = pipeline.predict(proc); action_queue.put(cmd)
+            
+            #cmd = pipeline.predict(proc); action_queue.put(cmd)
+            
+            cmd = pipeline.predict(proc)
+            # ←— print every timestep’s prediction
+            print(f"[{time.strftime('%H:%M:%S')}] Prediction:", cmd)
+            action_queue.put(cmd)
+            
             if pipeline.adaptive and not label_queue.empty():
                 lbl, windows = label_queue.get()
                 for w in windows:

@@ -33,6 +33,7 @@ def stream_data():
     buf = []
     while len(buf) < WINDOW_SIZE:
         sample, ts = _inlet.pull_sample(timeout=1.0 / _sampling_rate)
+        # print(f"Sample shape: {np.shape(sample)}, Sample: {sample}")
         if sample:
             # optionally: ts_corrected = ts + _time_offset
             buf.append(sample)
