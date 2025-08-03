@@ -45,7 +45,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>0</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -69,7 +69,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -93,7 +93,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -117,7 +117,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -141,7 +141,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -165,7 +165,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -189,7 +189,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -213,7 +213,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -237,7 +237,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -261,7 +261,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -285,7 +285,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -309,7 +309,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -333,7 +333,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -357,7 +357,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -381,7 +381,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -405,7 +405,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -429,7 +429,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -453,7 +453,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -477,7 +477,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -501,7 +501,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -525,7 +525,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -549,7 +549,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -573,7 +573,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -597,7 +597,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -621,7 +621,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -645,7 +645,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -669,7 +669,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -693,7 +693,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -717,7 +717,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -741,7 +741,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -765,7 +765,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -789,7 +789,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -813,7 +813,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -837,7 +837,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -861,7 +861,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -885,7 +885,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -909,7 +909,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -933,7 +933,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -957,7 +957,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -981,7 +981,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1005,7 +1005,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1029,7 +1029,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1053,7 +1053,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1077,7 +1077,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1101,7 +1101,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1125,7 +1125,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1149,7 +1149,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1173,7 +1173,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1197,7 +1197,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1221,7 +1221,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1245,7 +1245,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1269,7 +1269,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1293,7 +1293,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1317,7 +1317,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1341,7 +1341,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1365,7 +1365,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1389,7 +1389,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1413,7 +1413,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1437,7 +1437,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1461,7 +1461,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1485,7 +1485,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1509,7 +1509,7 @@
             <Order>4</Order>
             <Index>2</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1533,7 +1533,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1557,7 +1557,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>0</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1581,7 +1581,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1605,7 +1605,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1629,7 +1629,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1653,7 +1653,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1677,7 +1677,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1701,7 +1701,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1725,7 +1725,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1749,7 +1749,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1773,7 +1773,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1797,7 +1797,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1821,7 +1821,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1845,7 +1845,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1869,7 +1869,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1893,7 +1893,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1917,7 +1917,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>
@@ -1941,7 +1941,7 @@
             <Order>0</Order>
             <Index>-1</Index>
           </NotchFilter>
-          <BipolarChannel>1</BipolarChannel>
+          <BipolarChannel>64</BipolarChannel>
         </Value>
       </Item>
       <Item>

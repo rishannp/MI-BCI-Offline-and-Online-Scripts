@@ -21,7 +21,7 @@ GAT_MODEL_PT    = r"C:\Users\uceerjp\Desktop\PhD\Year 2\online experiments\worki
 VISUALISE_PLV   = True
 
 # ─── EEG PREPROCESSING ───────────────────────────────────────────────────
-WINDOW_SIZE     = 256 * 3   # 3 s @ 256 Hz
+WINDOW_SIZE     = 256 * 1   # 3 s @ 256 Hz
 STEP_SIZE       = 128       # ~500 ms step
 BUFFER_SIZE     = 10
 THRESHOLD       = 3
