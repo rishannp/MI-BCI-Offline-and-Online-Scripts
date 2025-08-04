@@ -30,7 +30,7 @@ SAMPLING_RATE   = 256
 # ─── SUBJECT & SESSION ──────────────────────────────────────────────────
 SUBJECT_ID      = "000"     # change per participant
 SESSION_ID      = "001"     # change per session
-RESULTS_DIR     = "./results"  # base output dir
+RESULTS_DIR     = "./collection_results"  # base output dir
 
 # Derived paths (don’t modify)
 SUBJECT_DIR = os.path.join(RESULTS_DIR, f"Subject_{SUBJECT_ID}")

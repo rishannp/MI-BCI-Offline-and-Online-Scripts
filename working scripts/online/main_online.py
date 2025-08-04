@@ -33,7 +33,7 @@ def main():
     # PLV visualiser
     def plv_visualiser():
         fig, ax = plt.subplots(figsize=(3,3))
-        im = ax.imshow(np.zeros((n_channels,n_channels)), cmap='viridis', vmin=0, vmax=1)
+        im = ax.imshow(np.zeros((n_channels,n_channels)), cmap='hot', vmin=0, vmax=1)
         ax.set_title("Live PLV")
         plt.colorbar(im, ax=ax)
         plt.ion(); plt.show()
